@@ -1,0 +1,29 @@
+---
+title: "Sports Medicine Confidence Intervals"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, echo = FALSE,
+                      messages = FALSE,
+                      fig.height = 8,
+                      fig.width = 8)
+source("load_packages.R")
+source("0-find-abstracts.R")
+source("1_data_from_Georgescu_Wren.R")
+source("1-find-intervals.R")
+source("2-merge-batches-of-extracted-data.R")
+source("3-main-analysis.R")
+source("4-table2.R")
+source("5-figure3-supplement2.R")
+source("6-missing-data.R")
+source("7-validation-checks.R")
+```
+
+# Papers By Year
+
+```{r}
+#p_paper_year
+```
+
