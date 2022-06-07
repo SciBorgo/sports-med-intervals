@@ -20,6 +20,7 @@ types = c('Journal Article','Clinical Trial','Meta-Analysis','Review','Randomize
 types.search = paste(paste(types, '[PT]', sep=''), collapse=' OR ', sep='')
 
 # Data extraction batches
+# Note: Sports Medicine and Arthroscopy Review and Clinics in Sports Medicine did not have any articles with ratio intervals over the studied period and were removed from the below journal lists.
 journals = c('Br J Sports Med','Am J Sports Med','Med Sci Sports Exerc','J Sci Med Sport')
 journals = c('Scand J Med Sci Sports','Arch Phys Med Rehabil','J Rehabil Med','J Sports Sci Med','Clin J Sport Med','Am J Phys Med Rehabil')
 journals = c('Res Sports Med') # restrict to years 2005 to 2022
@@ -59,6 +60,9 @@ p_paper_year = ggplot(data=numbers, aes(x=year, y=count, col=factor(journal)))+
   theme_bw()+
   theme(legend.position=c(0.3,0.84), panel.grid.minor = element_blank())
 
+# Rename
+meta = ids
+
 # Remove duplicates
 meta = dplyr::filter(meta, duplicated(pubmed)==F)
 
@@ -66,5 +70,5 @@ meta = dplyr::filter(meta, duplicated(pubmed)==F)
 with(meta, table(journal, year))
 
 # Move onto '1-find-intervals', don't clear environment
-# Repeat these steps for each batch (n=4)
+# Repeat these steps for each batch
 

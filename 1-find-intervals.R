@@ -7,7 +7,7 @@
 
 # Packages
 library(rentrez)
-#source('api-key.R') # not shared on github
+#source('api-key.R') # not shared on github, you will need to create your own key
 set_entrez_key(my.api.key) 
 library(XML)
 library(stringr)
@@ -533,8 +533,16 @@ save(data, any.data, a, file = 'intervals-first-batch-sample1.RData')
 save(data, any.data, a, file = 'intervals-first-batch-sample2.RData') # Save second block, crashed midway through first
 save(data, any.data, a, file = 'intervals-second-batch.RData')
 save(data, any.data, a, file = 'intervals-third-batch-res-sports-med.RData')
-save(data, any.data, a, file = 'intervals-third-batch-eur-j-phys-rehabil-med')
-
+save(data, any.data, a, file = 'intervals-third-batch-eur-j-phys-rehabil-med.RData')
+save(data, any.data, a, file = 'intervals-forth-batch-eur-j-phys-rehabil-med-p2.RData') # Restarted due to crash
+save(data, any.data, a, file = 'intervals-forth-batch-eur-j-phys-rehabil-med.RData') # Restarted due to crash
+save(data, any.data, a, file = 'intervals-fifth-e1.RData')
+save(data, any.data, a, file = 'intervals-fifth-e2.RData') # Restarted due to crash
+save(data, any.data, a, file = 'intervals-fifth-e3.RData') # Restarted due to crash
+save(data, any.data, a, file = 'intervals-fifth-e4.RData') # Restarted due to crash
+save(data, any.data, a, file = 'intervals-sixth.RData')
+save(data, any.data, a, file = 'intervals-seven-e1.RData')
+save(data, any.data, a, file = 'intervals-seven-e2.RData') # Restarted due to crash
 
 
 #### End
