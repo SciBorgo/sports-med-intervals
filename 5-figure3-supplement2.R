@@ -5,14 +5,8 @@
 # David N Borg
 # May, 2022
 
-# Packages
-library(tidyverse)
-library(janitor)
-library(ggplot2)
-library(cowplot)
-
 # Load data sets
-d_papers <- read_csv('data-articles-searched.csv') %>%
+d_papers <- arrow::read_parquet("data-articles-searched.parquet") %>%
   clean_names() %>%
   mutate(year = format(date, format = "%Y"))
 
@@ -31,11 +25,11 @@ to.table = filter(data, mistake==FALSE, lower>0) %>%
 
 # Select only 95% CIs
 dsub <- to.table %>% filter(ci_level == '95')
-length(unique(dsub$pubmed))
+# length(unique(dsub$pubmed))
 
 # Exploratory analyses: by journal
-table(dsub$journal)
-dsub %>%
+# table(dsub$journal)
+p1 = dsub %>%
   filter(!journal %in% c('The Physician and sportsmedicine',
                          'The Journal of sports medicine and physical fitness',
                          'Research in sports medicine (Print)',
@@ -71,9 +65,9 @@ dsub %>%
   theme(panel.grid.minor = element_blank())+
   facet_wrap(~journal) +
   guides(colour=guide_legend(title="Interval"))
-ggsave(file = "supplement2.png", units="in", dpi = 600, width = 12, height = 7)
+ggsave(p1, file = "supplement2.png", units="in", dpi = 600, width = 12, height = 7)
 
-dsub %>%
+p2 = dsub %>%
   filter(!journal %in% c('Research in sports medicine (Print)',
                          'Journal of sports science & medicine',
                          'European journal of physical and rehabilitation medicine')) %>%
@@ -88,12 +82,12 @@ dsub %>%
   theme(panel.grid.minor = element_blank())+
   facet_wrap(~journal)+
   guides(colour = 'none')
-ggsave(file = "figure_lower_by_time.png", units="in", dpi = 600, width = 7, height = 5)
+ggsave(p2, file = "figure_lower_by_time.png", units="in", dpi = 600, width = 7, height = 5)
 
 
 
 ## Explore change over time
-dsub %>%
+p3 = dsub %>%
   mutate(year = as.integer(year),
          year_cut = cut(year,
                         breaks = c(2000,2007,2012,2017,2023),
@@ -112,7 +106,7 @@ dsub %>%
   facet_wrap(~year_cut) +
   guides(colour=guide_legend(title="Interval")) +
   scale_colour_manual(values = c('grey70','black'))
-ggsave(file = "figure3.png", units="in", dpi = 600, width = 7, height = 5)
+ggsave(p3, file = "figure3.png", units="in", dpi = 600, width = 7, height = 5)
 
 
 
