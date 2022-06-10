@@ -30,4 +30,8 @@ install.packages(c("tidyverse",
 "viridis"))
 ```
 
-## Other Notes
+# Structure
+
+Most of the files and scripts are located in the main folder. However, some scripts in the "Extracted Data" folder are from the data extraction process. These are to show the process for how the data was extracted, and are not meant to be run on local machines/devices.
+
+A summary of the data presented in the manuscript is in the "report.md" file. All R scripts within the main folder are utilized to populate this document.
