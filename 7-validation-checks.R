@@ -4,7 +4,7 @@
 # DN Borg & IB Stewart
 # May, 2022
 
-d <- read_csv("data-articles-searched.csv")
+d <- arrow::read_parquet("data-articles-searched.parquet")
 
 # repeatable analysis
 set.seed(2022-05-26)

@@ -4,16 +4,9 @@
 # David N Borg
 # May, 2022
 
-# Packages
-library(tidyverse)
-library(janitor)
-library(ggplot2)
-library(cowplot)
-library(naniar)
-library(viridis)
 
 # Load data sets
-d_papers <- read_csv('data-articles-searched.csv') %>%
+d_papers <- arrow::read_parquet("data-articles-searched.parquet") %>%
   clean_names() %>%
   mutate(year = format(date, format = "%Y"))
 
@@ -22,28 +15,28 @@ data <- read_csv('data-intervals.csv') %>%
   left_join({d_papers %>% select(pubmed, year)}, by = 'pubmed')
 
 # Missing CI level: Investigate missings
-data %>% select(pubmed,is_odds,is_risk,is_hazard,journal,year,ci_level,mistake) %>%
+gg_miss = data %>% select(pubmed,is_odds,is_risk,is_hazard,journal,year,ci_level,mistake) %>%
   vis_miss()
 
-data %>% select(pubmed,is_odds,is_risk,is_hazard,journal,year,ci_level,mistake) %>%
+gg_miss_year = data %>% select(pubmed,is_odds,is_risk,is_hazard,journal,year,ci_level,mistake) %>%
   gg_miss_case(facet = year)
 
-data %>% select(pubmed,is_odds,is_risk,is_hazard,journal,year,ci_level,mistake) %>%
+gg_miss_journal = data %>% select(pubmed,is_odds,is_risk,is_hazard,journal,year,ci_level,mistake) %>%
   gg_miss_case(facet = journal)
 
-data %>% select(pubmed,is_odds,is_risk,is_hazard,journal,year,ci_level,mistake) %>%
+gg_miss_ci_year = data %>% select(pubmed,is_odds,is_risk,is_hazard,journal,year,ci_level,mistake) %>%
   select(ci_level,year) %>%
   mutate('CI level' = ci_level,
          ci_level = NULL) %>%
   gg_miss_fct(fct = year) +
-  labs(y = 'Variable', x = 'Year') -> p1 
-p1 # decrease in missing data over time
+  labs(y = 'Variable', x = 'Year') 
+#p1 # decrease in missing data over time
 
-data %>% select(pubmed,is_odds,is_risk,is_hazard,journal,year,ci_level,mistake) %>%
+gg_miss_ci_journal1 = data %>% select(pubmed,is_odds,is_risk,is_hazard,journal,year,ci_level,mistake) %>%
   select(ci_level,journal) %>%
   gg_miss_fct(fct = journal)
 
-data %>%
+gg_miss_ci_journal = data %>%
   select(journal,ci_level) %>%
   group_by(journal) %>%
   miss_var_summary() %>%
@@ -70,11 +63,11 @@ data %>%
   labs(y = 'Variable', x = 'Journal') +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
-  scale_fill_viridis() -> p2
-p2
+  scale_fill_viridis_c()
+
 
 # 'interaction' between journal and year
-data %>%
+journalbyyear = data %>%
   select(journal,ci_level, year) %>%
   group_by(journal,year) %>%
   miss_var_summary() %>%
@@ -84,10 +77,10 @@ data %>%
   labs(y = 'Confidence interval level', x = 'Journal') +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
-  scale_fill_viridis()
+  scale_fill_viridis_c()
 
 # Supplement 1: Panel missing data plots
-plot_grid(p1, p2,
+pg1 = plot_grid(gg_miss_ci_year, gg_miss_ci_journal,
           ncol = 1,
           nrow = 2,
           labels = c('A','B'),
@@ -96,7 +89,7 @@ plot_grid(p1, p2,
           axis = "lr",
           rel_heights = c(.25,.5),
           scale = .9)
-ggsave(file = "supplement1.png", units="in", width = 7, height = 7, dpi = 600)
+ggsave(pg1, file = "supplement1.png", units="in", width = 7, height = 7, dpi = 600)
 
 # Supplement 3: Cumulative distribution of intervals with missing level of confidence interval
 rr.level <- data %>% filter(lower>0, mistake == 'FALSE', !ci_level %in% c('90','95','99'))
@@ -115,6 +108,6 @@ lplot = ggplot(rr.level, aes(lower))+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
   guides(colour=guide_legend(title="Interval"))
-lplot
-ggsave(file = "supplement3.png", units="in", dpi = 600, width = 5, height = 3.5)
+
+ggsave(lplot, file = "supplement3.png", units="in", dpi = 600, width = 5, height = 3.5)
 

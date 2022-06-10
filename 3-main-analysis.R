@@ -4,17 +4,8 @@
 # David N Borg
 # May, 2022
 
-# Packages
-library(tidyverse)
-library(janitor)
-library(ggplot2)
-library(cowplot)
-library(naniar)
-library(pander)
-library(tables)
-
 # Load data sets
-d_papers <- read_csv('data-articles-searched.csv') %>%
+d_papers <- arrow::read_parquet("data-articles-searched.parquet") %>%
   clean_names() %>%
   mutate(year = format(date, format = "%Y"))
 
@@ -22,10 +13,10 @@ data <- read_csv('data-intervals.csv') %>%
   clean_names() %>%
   left_join({d_papers %>% select(pubmed, year)}, by = 'pubmed')
 
-d_unbiased <- read_csv('rsta20170356_si_002.csv') %>%
+d_unbiased <- arrow::read_parquet("unbiased.parquet") %>%
   clean_names()
 
-load("/Users/david/Downloads/Georgescu.Wren (1).RData")
+complete = arrow::read_parquet("complete.parquet")
 barnett_abstract = complete %>% filter(source == 'Abstract')
 
 
@@ -49,18 +40,18 @@ data %>% group_by(pubmed, journal) %>%
   count() -> unique_papers
 unique_papers %>% group_by(journal) %>%
   count() -> out
-out
+# out
 out %>% write.csv(file = 'interval_papers.csv', row.names = F)
 
-length(unique(data$pubmed))
+#length(unique(data$pubmed))
 
 
-# Summary
+# Summary N by journal
 to.table = group_by(data, journal) %>%
   summarise(n = n(),
             journals = length(unique(journal)),
             zero = sum(lower==0))
-to.table
+#to.table
 
 # Remove mistakes, boundary, confidence level missing
 dsum <- data %>% filter(mistake == 'FALSE')
@@ -78,15 +69,15 @@ data %>% filter(lower<0) %>%
 # Missing CI level
 to.table = filter(data, mistake==FALSE, lower>0) %>%
   mutate(is_95_missing = is.na(ci_level))
-tabular(Heading('Missing')*factor(is_95_missing) + 1~ Heading('')*(factor(source) +1)*((n=1) + Percent('col')), data=to.table)
+#tabular(Heading('Missing')*factor(is_95_missing) + 1~ Heading('')*(factor(source) +1)*((n=1) + Percent('col')), data=to.table)
 
 # CI levels reported
-table(to.table$ci_level) # excluding mistakes and intervals where the lower bound was <0
-table(data$ci_level) # all papers
+#table(to.table$ci_level) # excluding mistakes and intervals where the lower bound was <0
+#table(data$ci_level) # all papers
 
 # Select only 95% CIs
 dsub <- to.table %>% filter(ci_level == '95')
-length(unique(dsub$pubmed))
+#length(unique(dsub$pubmed))
 
 # Lower confidence interval (log-scale)
 # split by CI type - make nicer label (also add numbers?)
@@ -105,12 +96,12 @@ lplot = ggplot(rr.lower, aes(x=lower))+
   facet_wrap(~'95% CI lower bounds') +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
-lplot
+#lplot
 #ggsave(file = "figure_lower.png", units="in", dpi = 600, width = 4, height = 3.5)
 
 # number and percent excluded from plot by the limits on the x-axis
-round(100*sum(rr.lower$lower<0.1)/nrow(rr.lower),1)
-round(100*sum(rr.lower$lower>10)/nrow(rr.lower),1)
+# round(100*sum(rr.lower$lower<0.1)/nrow(rr.lower),1)
+# round(100*sum(rr.lower$lower>10)/nrow(rr.lower),1)
 
 
 # Upper confidence interval (log-scale)
@@ -128,19 +119,19 @@ uplot = ggplot(dsub, aes(x=upper))+
   facet_wrap(~'95% CI upper bounds')+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
-uplot
+
 #ggsave(file = "figure_upper.png", units="in", dpi = 600, width = 4, height = 3.5)
 
 
 ## Panel plots
-plot_grid(lplot, uplot,
+fig1 = plot_grid(lplot, uplot,
           ncol = 2,
           nrow = 1,
           #labels = c('A','B'),
           #label_size = 16
           align = 'v',
           axis = "lr")
-ggsave(file = "figure1.png", units="in", width = 7, height = 3.5, dpi = 600)
+ggsave(fig1, file = "figure1.png", units="in", width = 7, height = 3.5, dpi = 600)
 
 
 
@@ -160,7 +151,7 @@ lbarn = ggplot(dsub, aes(x=lower))+
   facet_wrap(~'95% CI lower bounds') +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
-lbarn
+# lbarn
 
 ubarn = ggplot(dsub, aes(x=upper))+
   stat_ecdf(data = barnett_abstract, aes(x = upper), colour = 'black', geom = "step", size=0.8)+
@@ -176,22 +167,22 @@ ubarn = ggplot(dsub, aes(x=upper))+
   facet_wrap(~'95% CI upper bounds')+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
-ubarn
+# ubarn
 
 ## Panel plots
-plot_grid(lbarn, ubarn,
+fig2 = plot_grid(lbarn, ubarn,
           ncol = 2,
           nrow = 1,
           #labels = c('A','B'),
           #label_size = 16
           align = 'v',
           axis = "lr")
-ggsave(file = "figure2.png", units="in", width = 7, height = 3.5, dpi = 600)
+ggsave(fig2, file = "figure2.png", units="in", width = 7, height = 3.5, dpi = 600)
 
 
 # Z-value curve
 z_95 = 1.96
-dsub %>%
+p4 = dsub %>%
   mutate(se = ({log(upper)}-{log(lower)})/(2*z_95),
          z = log(mean)/se) %>%
   ggplot() + geom_histogram(aes(x = z), binwidth = 0.02, size = 0.1, alpha = 0.7) +
@@ -204,9 +195,9 @@ dsub %>%
   labs(x = 'z-value', y = 'Count') +
   geom_vline(xintercept = c(-1.96,1.96), lty=1, col='black') +
   xlim(-7,7)
-ggsave(file = "figure4-0.02.png", units="in", dpi = 600, width = 4, height = 3)
+ggsave(p4, file = "figure4-0.02.png", units="in", dpi = 600, width = 4, height = 3)
 
-dsub %>%
+p4_3 = dsub %>%
   mutate(se = ({log(upper)}-{log(lower)})/(2*z_95),
          z = log(mean)/se,
          Significant = as.factor(between(z, -1.96, 1.96)),
@@ -222,9 +213,9 @@ dsub %>%
   #geom_vline(xintercept = c(-1.96,1.96), lty=1, col='black') +
   scale_x_continuous(limits = c(-7,7), n.breaks = 8) +
   scale_fill_brewer(palette = 'Set2', direction = 1)
-ggsave(file = "figure4-0.02.png", units="in", dpi = 600, width = 4.5, height = 2.75)
+ggsave(p4_3, file = "figure4-0.02.png", units="in", dpi = 600, width = 4.5, height = 2.75)
 
-dsub %>%
+p4_2 =dsub %>%
   mutate(se = ({log(upper)}-{log(lower)})/(2*z_95),
          z = log(mean)/se,
          Significant = as.factor(between(z, -1.96, 1.96)),
@@ -240,9 +231,9 @@ dsub %>%
   #geom_vline(xintercept = c(-1.96,1.96), lty=1, col='black') +
   scale_x_continuous(limits = c(-7,7), n.breaks = 8) +
   scale_fill_brewer(palette = 'Paired', direction = 1)
-ggsave(file = "figure4-0.04-blue.png", units="in", dpi = 600, width = 4.5, height = 2.75)
+ggsave(p4_2, file = "figure4-0.04-blue.png", units="in", dpi = 600, width = 4.5, height = 2.75)
 
-dsub %>%
+p4_1 = dsub %>%
   mutate(se = ({log(upper)}-{log(lower)})/(2*z_95),
          z = log(mean)/se,
          Significant = as.factor(between(z, -1.96, 1.96)),
@@ -258,7 +249,7 @@ dsub %>%
   #geom_vline(xintercept = c(-1.96,1.96), lty=1, col='black') +
   scale_x_continuous(limits = c(-7,7), n.breaks = 8) +
   scale_fill_brewer(palette = 'Paired', direction = 1)
-ggsave(file = "figure4-0.02-blue.png", units="in", dpi = 600, width = 4.5, height = 2.75)
+ggsave(p4_1, file = "figure4-0.02-blue.png", units="in", dpi = 600, width = 4.5, height = 2.75)
 
 #### End
 

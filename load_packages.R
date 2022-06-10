@@ -10,4 +10,5 @@ library(tables)
 library(cowplot)
 library(naniar)
 library(viridis)
+library(gtsummary)
 

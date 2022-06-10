@@ -1,7 +1,7 @@
 ---
 title: "Sports Medicine Confidence Intervals"
 date: "`r Sys.Date()`"
-output: pdf_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -10,10 +10,6 @@ knitr::opts_chunk$set(warning = FALSE, echo = FALSE,
                       fig.height = 8,
                       fig.width = 8)
 source("load_packages.R")
-source("0-find-abstracts.R")
-source("1_data_from_Georgescu_Wren.R")
-source("1-find-intervals.R")
-source("2-merge-batches-of-extracted-data.R")
 source("3-main-analysis.R")
 source("4-table2.R")
 source("5-figure3-supplement2.R")
@@ -21,9 +17,112 @@ source("6-missing-data.R")
 source("7-validation-checks.R")
 ```
 
-# Papers By Year
+# Main Analysis
+
+## Summary of Articles Searched
 
 ```{r}
-#p_paper_year
+length(unique(d_papers$pubmed)) # checks
 ```
 
+## Articles by journal
+
+```{r}
+with(d_papers, table(journal)) %>%
+  as.data.frame() %>%
+  rename(Journal = journal,
+         Frequency = Freq) %>%
+  knitr::kable()
+```
+
+\newpage
+
+## Articles by journal and year
+
+```{r, fig.width=8, fig.height=9}
+with(d_papers, table(journal, year)) %>%
+  as.data.frame() %>%
+  ggplot(aes(y=Freq,x=year,color=journal,group=journal)) +
+  geom_line()+
+  facet_wrap(~journal, ncol = 3) +
+  theme_bw() +
+  labs(x = "", y = "") +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+\newpage
+
+## Summary of ratio interval papers
+
+```{r}
+data %>% group_by(journal) %>%
+  count() %>%
+  mutate(pc = (n/nrow(data)*100),
+         pc = round(pc,1)) %>%
+  knitr::kable()
+```
+
+## Mistakes
+
+```{r}
+tabular(Heading('Mistake')*factor(mistake) + 1~ Heading('')*factor(source)*((n=1) + Percent('col')), data=data) 
+
+```
+
+## CI bound below Zero
+
+```{r}
+data %>% filter(lower<0) %>%
+  count() %>%
+  mutate(pc = (n/nrow(data))*100) %>% knitr::kable()
+```
+
+## Missing CI level
+
+```{r}
+to.table = filter(data, mistake==FALSE, lower>0) %>%
+  mutate(is_95_missing = is.na(ci_level))
+tabular(Heading('Missing')*factor(is_95_missing) + 1~ Heading('')*(factor(source) +1)*((n=1) + Percent('col')), data=to.table)
+
+```
+
+## Figure 1
+
+Lower confidence interval (log-scale) split by CI type -, and upper confidence interval (log-scale)
+
+![Figure 1](figure1.png)
+
+## Figure 2
+
+![Figure 2](figure2.png)
+## Figure 3 
+
+![Figure 3](figure3.png)
+
+## Figure 4
+
+![Figure 4](figure4-0.02-blue.png)
+
+\newpage
+
+# Table 2
+
+```{r}
+gt_tab2
+```
+
+
+# Supplements
+
+## Supplement 1
+
+![Supplement 1](supplement1.png)
+
+## Supplement 2 
+
+![Supplement 2](supplement2.png)
+
+## Supplement 3
+
+![Supplement 3](supplement3.png)
