@@ -5,14 +5,9 @@
 # David N Borg
 # May, 2022
 
-# Packages
-library(tidyverse)
-library(janitor)
-library(pander)
-library(tables)
 
 # Load data sets
-d_papers <- read_csv('data-articles-searched.csv') %>%
+d_papers <- arrow::read_parquet("data-articles-searched.parquet") %>%
   clean_names() %>%
   mutate(year = format(date, format = "%Y"))
 
@@ -20,10 +15,10 @@ data <- read_csv('data-intervals.csv') %>%
   clean_names() %>%
   left_join({d_papers %>% select(pubmed, year)}, by = 'pubmed')
 
-d_unbiased <- read_csv('rsta20170356_si_002.csv') %>%
+d_unbiased <- arrow::read_parquet("unbiased.parquet") %>%
   clean_names()
 
-load("/Users/david/Downloads/Georgescu.Wren (1).RData")
+complete = arrow::read_parquet("complete.parquet")
 barnett_abstract = complete %>% filter(source == 'Abstract')
 
 # Remove mistakes, boundary, confidence level missing
@@ -37,100 +32,49 @@ to.table = filter(data, mistake==FALSE, lower>0) %>%
 
 # Select only 95% CIs
 dsub <- to.table %>% filter(ci_level == '95')
-length(unique(dsub$pubmed))
+# length(unique(dsub$pubmed))
 
 
-#### Lower bound analysis
-# Lower intervals between 1 and 1.1
-for.table = group_by(dsub, source) %>%
+dsub_abs = dsub %>%
+  filter(source == "abstract") %>%
+  mutate(set = "Current Study") %>%
+  select(set, lower, upper)
+
+barnett_abs = complete %>% 
+  filter(source == 'Abstract') %>%
+  mutate(set = "Barnett & Wren") %>%
+  select(set, lower, upper)
+
+d_un_abs = d_unbiased %>%
+  rename(lower=lower_bound_95_percent_ci,
+         upper=upper_bound_95_percent_ci) %>%
+  mutate(set = "Unbiased") %>%
+    select(set, lower, upper)
+
+# Build summary set -------
+df_tabcomb = bind_rows(dsub_abs, barnett_abs, d_un_abs) %>%
+  mutate(set = factor(set,
+                      levels = c("Current Study", "Barnett & Wren", "Unbiased"))) %>%
   mutate(narrow = lower>1 & lower<=1.1,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('(1, 1.1]')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
+         ll_11 = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes'))) %>%
+  mutate(narrow2 = lower>1 & lower<=1.2,
+         ll_12 = factor(as.numeric(narrow2), levels=0:1, labels=c('No','Yes'))) %>%
+  mutate(narrow3 = upper>0.9 & upper<1,
+         ul_11 = factor(as.numeric(narrow3), levels=0:1, labels=c('No','Yes')))%>%
+  mutate(narrow4 = upper>0.8 & upper<1,
+         ul_12 = factor(as.numeric(narrow4), levels=0:1, labels=c('No','Yes')))
 
-# Lower intervals between 1 and 1.2
-for.table = group_by(dsub, source) %>%
-  mutate(narrow = lower>1 & lower<=1.2,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('(1, 1.2]')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
-
-## As above but for Barnett and Wren
-# Lower intervals between 1 and 1.1
-barnett_abstract = complete %>% filter(source == 'Abstract') %>% clean_names()
-for.table = group_by(barnett_abstract, source) %>%
-  mutate(narrow = lower>1 & lower<=1.1,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('(1, 1.1]')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
-
-# Lower intervals between 1 and 1.2
-for.table = group_by(barnett_abstract, source) %>%
-  mutate(narrow = lower>1 & lower<=1.2,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('(1, 1.2]')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
-
-## As above but for unbiased dataset
-d_unbiased <- d_unbiased %>% mutate(source = 'source')
-for.table = group_by(d_unbiased, source) %>%
-  mutate(narrow = lower_bound_95_percent_ci>1 & lower_bound_95_percent_ci<=1.1,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('(1, 1.1]')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
-
-# Lower intervals between 1 and 1.2
-for.table = group_by(d_unbiased, source) %>%
-  mutate(narrow = lower_bound_95_percent_ci>1 & lower_bound_95_percent_ci<=1.2,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('(1, 1.2]')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
-
-
-
-
-#### Upper bound analysis
-# Upper intervals between 0.9 and 1
-for.table = group_by(dsub, source) %>%
-  mutate(narrow = upper>0.9 & upper<1,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('[0.9, 1]')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
-
-# Upper intervals between 0.8 and 1
-for.table = group_by(dsub, source) %>%
-  mutate(narrow = upper>0.8 & upper<1,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('[0.8, 1)')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
-
-## As above for Barnett and Wren
-# Upper intervals between 0.9 and 1
-for.table = group_by(barnett_abstract, source) %>%
-  mutate(narrow = upper>0.9 & upper<1,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('[0.9, 1]')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
-
-# Upper intervals between 0.8 and 1
-for.table = group_by(barnett_abstract, source) %>%
-  mutate(narrow = upper>0.8 & upper<1,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('[0.8, 1)')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
-
-## As above for unbiased dataset
-# Upper intervals between 0.9 and 1
-d_unbiased <- d_unbiased %>% mutate(source = 'source')
-for.table = group_by(d_unbiased, source) %>%
-  mutate(narrow = upper_bound_95_percent_ci>0.9 & upper_bound_95_percent_ci<1,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('[0.9, 1]')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
-
-# Upper intervals between 0.8 and 1
-for.table = group_by(d_unbiased, source) %>%
-  mutate(narrow = upper_bound_95_percent_ci>0.8 & upper_bound_95_percent_ci<1,
-         narrowf = factor(as.numeric(narrow), levels=0:1, labels=c('No','Yes')))
-tab = tabular(Heading('[0.8, 1)')*narrowf+1 ~ Heading('')*factor(source)*((n=1) + Percent('col')), data=for.table)
-pander(tab, digits=4)
+gt_tab2 = df_tabcomb %>%
+  select(-lower, -narrow, -narrow2, -narrow3, -narrow4, -upper) %>%
+  tbl_summary(by = set,    statistic = list(
+    all_continuous() ~ "{median} ({IQR})",
+    all_categorical() ~ "{n} ({p}%)"
+  ),
+  digits = all_continuous() ~ 2,
+  label = list(ll_11 ~ "Lower interval between 1 and 1.1",
+               ll_12 ~ "Lower intervals between 1 and 1.2",
+               ul_11 ~ "Upper interval between 0.9 and 1",
+               ul_12 ~ "Upper intervals between 0.8 and 1"),
+  missing = "no"
+  ) %>%
+  modify_caption("**Table 2. CI characteristics**")
